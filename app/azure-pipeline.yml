@@ -1,0 +1,65 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20'
+    displayName: 'Install Node.js'
+
+  - script: |
+      npm install
+    displayName: 'Install dependencies'
+
+  - script: |
+      npm run lint
+    displayName: 'Run Linting'
+
+  - script: |
+      npm run test
+    displayName: 'Run Tests'
+
+  - script: |
+      npm run build
+    displayName: 'Build Project'
+
+  - task: CopyFiles@2
+    inputs:
+      SourceFolder: '$(Build.SourcesDirectory)/.next'
+      Contents: '**'
+      TargetFolder: '$(Build.ArtifactStagingDirectory)/.next'
+    displayName: 'Copy .next build files'
+
+  - task: CopyFiles@2
+    inputs:
+      SourceFolder: '$(Build.SourcesDirectory)/public'
+      Contents: '**'
+      TargetFolder: '$(Build.ArtifactStagingDirectory)/public'
+    displayName: 'Copy public folder'
+
+  - task: CopyFiles@2
+    inputs:
+      SourceFolder: '$(Build.SourcesDirectory)'
+      Contents: 'package.json'
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    displayName: 'Copy package.json'
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: 'drop'
+    displayName: 'Publish Artifact: drop'
+
+  - task: AzureRmWebAppDeployment@4
+    inputs:
+      ConnectionType: 'AzureRM'
+      azureSubscription: 'Technical Test'
+      appType: 'webAppLinux'
+      WebAppName: 'app-technical-test'
+      packageForLinux: '$(Build.ArtifactStagingDirectory)'
+    displayName: 'Deploy to Azure WebApp'
